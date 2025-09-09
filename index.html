@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dirección aleatoria (crypto)</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#7dd3fc; --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071027 0%, #07162d 100%);display:flex;align-items:center;justify-content:center;padding:24px;color:white;}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:20px; width:100%; max-width:560px; box-shadow:0 6px 30px rgba(2,6,23,0.6);}
+    h1{margin:0 0 8px;font-size:18px;letter-spacing:0.2px}
+    p.lead{margin:0 0 18px;color:var(--muted);font-size:13px}
+    .address{background:var(--glass); padding:14px;border-radius:10px; display:grid; gap:10px; grid-template-columns: 1fr auto; align-items:center;}
+    .field{display:flex; flex-direction:column; gap:6px; padding-right:8px;}
+    .label{font-size:11px;color:var(--muted); text-transform:uppercase;}
+    .value{font-size:15px; font-weight:600; color:#e6eef7; word-break:break-word;}
+    button.copy{background:transparent;border:1px solid rgba(255,255,255,0.06); padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--accent); min-width:92px;}
+    .controls{display:flex; gap:8px; margin-top:14px; align-items:center;}
+    .btn-primary{background:linear-gradient(90deg,#0369a1,#0ea5a0); border:none; color:white; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:600;}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06); color:var(--muted); padding:10px 12px;border-radius:10px; cursor:pointer;}
+    .small{font-size:13px;color:var(--muted); margin-left:auto;}
+    .toast{position:fixed; right:20px; bottom:20px; background:#0b1220; color:var(--accent); padding:10px 14px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.6); display:none;}
+    footer{margin-top:12px;font-size:12px;color:var(--muted);}
+    @media (max-width:420px){ .address{grid-template-columns:1fr;} .small{display:none} }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1>Generador de direcciones aleatorias (crypto)</h1>
+    <p class="lead">Haz click en <strong>Nuevo</strong> para obtener otra dirección. Usa los botones para copiar cada propiedad o la dirección completa.</p>
+
+    <div id="addressBox" class="address" aria-live="polite">
+      <div class="field">
+        <div class="label">Ciudad</div>
+        <div id="city" class="value">—</div>
+      </div>
+      <div>
+        <button class="copy" data-copy="city">Copiar ciudad</button>
+      </div>
+
+      <div class="field">
+        <div class="label">Estado</div>
+        <div id="state" class="value">—</div>
+      </div>
+      <div>
+        <button class="copy" data-copy="state">Copiar estado</button>
+      </div>
+
+      <div class="field">
+        <div class="label">Código Postal</div>
+        <div id="zip" class="value">—</div>
+      </div>
+      <div>
+        <button class="copy" data-copy="zip">Copiar ZIP</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="newBtn" class="btn-primary">Nuevo</button>
+      <button id="copyAll" class="btn-ghost">Copiar dirección completa</button>
+      <div class="small">Fuente: lista local</div>
+    </div>
+
+    <footer>
+      <strong>Nota:</strong> el muestreo aleatorio utiliza <code>crypto.getRandomValues</code> para mayor entropía en el navegador.
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">Copiado</div>
+
+  <script>
+    // Lista de ciudades (usa el JSON que quieras)
+    const ciudades = [
+  {"city":"Caracas","state":"Distrito Capital","zip":"1010"},
+  {"city":"Maracaibo","state":"Zulia","zip":"4004"},
+  {"city":"Valencia","state":"Carabobo","zip":"2001"},
+  {"city":"Barquisimeto","state":"Lara","zip":"3001"},
+  {"city":"Maracay","state":"Aragua","zip":"2101"},
+  {"city":"Ciudad Guayana","state":"Bolívar","zip":"8050"},
+  {"city":"Maturín","state":"Monagas","zip":"6201"},
+  {"city":"San Cristóbal","state":"Táchira","zip":"5001"},
+  {"city":"Barinas","state":"Barinas","zip":"5201"},
+  {"city":"Ciudad Bolívar","state":"Bolívar","zip":"8001"},
+  {"city":"Barcelona","state":"Anzoátegui","zip":"6001"},
+  {"city":"Cumaná","state":"Sucre","zip":"6101"},
+  {"city":"Punto Fijo","state":"Falcón","zip":"4102"},
+  {"city":"Cabimas","state":"Zulia","zip":"4013"},
+  {"city":"Mérida","state":"Mérida","zip":"5115"},
+  {"city":"Puerto La Cruz","state":"Anzoátegui","zip":"6023"},
+  {"city":"Guatire","state":"Miranda","zip":"1221"},
+  {"city":"Ciudad Ojeda","state":"Zulia","zip":"4019"},
+  {"city":"Coro","state":"Falcón","zip":"4101"},
+  {"city":"Turmero","state":"Aragua","zip":"2115"},
+  {"city":"Los Teques","state":"Miranda","zip":"1201"},
+  {"city":"Guanare","state":"Portuguesa","zip":"3350"},
+  {"city":"San Felipe","state":"Yaracuy","zip":"3201"},
+  {"city":"Acarigua","state":"Portuguesa","zip":"3301"},
+  {"city":"Carora","state":"Lara","zip":"3050"},
+  {"city":"El Tigre","state":"Anzoátegui","zip":"6050"},
+  {"city":"Guarenas","state":"Miranda","zip":"1220"},
+  {"city":"Cabudare","state":"Lara","zip":"3023"},
+  {"city":"Carúpano","state":"Sucre","zip":"6150"},
+  {"city":"San Fernando de Apure","state":"Apure","zip":"7001"},
+  {"city":"Guacara","state":"Carabobo","zip":"2016"},
+  {"city":"Puerto Cabello","state":"Carabobo","zip":"2050"},
+  {"city":"El Tocuyo","state":"Lara","zip":"3018"},
+  {"city":"Valera","state":"Trujillo","zip":"3101"},
+  {"city":"La Victoria","state":"Aragua","zip":"2121"},
+  {"city":"Santa Rita","state":"Aragua","zip":"2106"},
+  {"city":"Güigüe","state":"Carabobo","zip":"2010"},
+  {"city":"Anaco","state":"Anzoátegui","zip":"6003"},
+  {"city":"Calabozo","state":"Guárico","zip":"2312"},
+  {"city":"Quíbor","state":"Lara","zip":"3061"}
+]
+;
+
+    // Generador de enteros seguros en [0, max)
+    function secureRandomInt(max) {
+      if (max <= 0) return 0;
+      // Rejection sampling to avoid modulo bias
+      const uint32Max = 2 ** 32;
+      const limit = Math.floor(uint32Max / max) * max;
+      const arr = new Uint32Array(1);
+      while (true) {
+        crypto.getRandomValues(arr);
+        const r = arr[0];
+        if (r < limit) return r % max;
+      }
+    }
+
+    // Selecciona una ciudad/dirección al azar
+    function pickRandomCity() {
+      const idx = secureRandomInt(ciudades.length);
+      return ciudades[idx];
+    }
+
+    // Render en DOM
+    function renderCity(obj) {
+      document.getElementById('city').textContent = obj.city;
+      document.getElementById('state').textContent = obj.state;
+      document.getElementById('zip').textContent = obj.zip;
+    }
+
+    // Copiar texto (usa Clipboard API con fallback)
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          // Fallback
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        showToast('Copiado: ' + text);
+      } catch (err) {
+        showToast('Error al copiar');
+        console.error(err);
+      }
+    }
+
+    // Toast simple
+    let toastTimeout = null;
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => t.style.display = 'none', 1800);
+    }
+
+    // Inicializa con una dirección aleatoria
+    let current = pickRandomCity();
+    renderCity(current);
+
+    // Eventos
+    document.getElementById('newBtn').addEventListener('click', () => {
+      current = pickRandomCity();
+      renderCity(current);
+    });
+
+    // Copiar individualmente
+    document.querySelectorAll('button.copy').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const prop = e.currentTarget.getAttribute('data-copy');
+        copyText(current[prop]);
+      });
+    });
+
+    // Copiar dirección completa (formateada)
+    document.getElementById('copyAll').addEventListener('click', () => {
+      const full = `Av. Ejemplo, Edif. Falso, Piso 3, Apto. 3B\nUrbanización Ficticia\n${current.city}, ${current.state}\nCódigo Postal: ${current.zip}`;
+      copyText(full);
+    });
+
+    // Permitir copiar haciendo click en el valor (opcional UX)
+    ['city','state','zip'].forEach(id => {
+      document.getElementById(id).addEventListener('click', () => {
+        copyText(document.getElementById(id).textContent);
+      });
+    });
+  </script>
+</body>
+</html>
